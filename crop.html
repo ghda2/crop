@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de Imagem para Typebot</title>
+    <!-- Importando CSS do Cropper.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #3b82f6;
+            margin-top: 0;
+        }
+        .instruction {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .file-input-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .file-input-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #e2e8f0;
+            border: 2px dashed #cbd5e1;
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .file-input-button:hover {
+            background-color: #cbd5e1;
+        }
+        #imageInput {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .editor-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .img-container {
+            max-height: 300px;
+            margin-bottom: 20px;
+        }
+        img {
+            display: block;
+            max-width: 100%;
+        }
+        .preview-container {
+            overflow: hidden;
+            width: 150px;
+            height: 150px;
+            margin: 10px auto;
+            border-radius: 50%;
+            border: 2px solid #3b82f6;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #334155;
+        }
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #059669;
+        }
+        .results-container {
+            display: none;
+            text-align: center;
+        }
+        .result-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            border: 2px solid #10b981;
+            overflow: hidden;
+        }
+        #resultImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .loading::after {
+            content: "...";
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Editor de Imagem</h2>
+        <p class="instruction">Carregue e ajuste sua foto para o cadastro</p>
+        
+        <div class="file-input-container">
+            <label class="file-input-button">
+                Clique para selecionar uma imagem
+                <input type="file" id="imageInput" accept="image/*">
+            </label>
+        </div>
+        
+        <div id="loading" class="loading">Processando imagem</div>
+        
+        <div id="editorContainer" class="editor-container">
+            <div class="img-container">
+                <img id="image" src="" alt="Imagem para editar">
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="aspectRatio">Formato:</label>
+                    <select id="aspectRatio" class="btn-secondary">
+                        <option value="1">Quadrado (1:1)</option>
+                        <option value="NaN">Livre</option>
+                        <option value="1.7777777777777777">Paisagem (16:9)</option>
+                        <option value="0.6666666666666666">Retrato (2:3)</option>
+                    </select>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="rotateLeftBtn" class="btn-secondary">↺ Girar à esquerda</button>
+                    <button id="rotateRightBtn" class="btn-secondary">↻ Girar à direita</button>
+                    <button id="zoomInBtn" class="btn-secondary">+</button>
+                    <button id="zoomOutBtn" class="btn-secondary">-</button>
+                </div>
+                
+                <div class="btn-group">
+                    <button id="resetBtn" class="btn-secondary">Resetar</button>
+                    <button id="cropBtn" class="btn-primary">Recortar</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="resultsContainer" class="results-container">
+            <h3>Imagem Ajustada</h3>
+            <div class="result-preview">
+                <img id="resultImage" src="">
+            </div>
+            <div class="btn-group">
+                <button id="backBtn" class="btn-secondary">Voltar a Editar</button>
+                <button id="confirmBtn" class="btn-success">Confirmar Imagem</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Importando Cropper.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script>
+        // Elementos DOM
+        const imageInput = document.getElementById('imageInput');
+        const image = document.getElementById('image');
+        const editorContainer = document.getElementById('editorContainer');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultImage = document.getElementById('resultImage');
+        const aspectRatioSelect = document.getElementById('aspectRatio');
+        const rotateLeftBtn = document.getElementById('rotateLeftBtn');
+        const rotateRightBtn = document.getElementById('rotateRightBtn');
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const cropBtn = document.getElementById('cropBtn');
+        const backBtn = document.getElementById('backBtn');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const loadingEl = document.getElementById('loading');
+        
+        // Variável para armazenar a instância do cropper
+        let cropper;
+        
+        // Função para inicializar o cropper
+        function initCropper() {
+            // Destruir instância anterior, se existir
+            if (cropper) {
+                cropper.destroy();
+            }
+            
+            // Inicializar nova instância
+            cropper = new Cropper(image, {
+                aspectRatio: parseFloat(aspectRatioSelect.value),
+                viewMode: 1,
+                dragMode: 'move',
+                autoCropArea: 0.8,
+                restore: false,
+                guides: true,
+                center: true,
+                highlight: false,
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                toggleDragModeOnDblclick: false,
+                minContainerWidth: 250,
+                minContainerHeight: 250
+            });
+        }
+        
+        // Carregar imagem
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Mostrar loading
+            loadingEl.style.display = 'block';
+            editorContainer.style.display = 'none';
+            resultsContainer.style.display = 'none';
+            
+            // Ler o arquivo
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                image.src = e.target.result;
+                
+                // Inicializar o cropper quando a imagem estiver carregada
+                image.onload = function() {
+                    editorContainer.style.display = 'block';
+                    loadingEl.style.display = 'none';
+                    initCropper();
+                };
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        // Alterar a proporção de aspecto
+        aspectRatioSelect.addEventListener('change', function() {
+            if (cropper) {
+                cropper.setAspectRatio(parseFloat(this.value));
+            }
+        });
+        
+        // Rotacionar à esquerda
+        rotateLeftBtn.addEventListener('click', function() {
+            if (cropper) cropper.rotate(-90);
+        });
+        
+        // Rotacionar à direita
+        rotateRightBtn.addEventListener('click', function() {
+            if (cropper) cropper.rotate(90);
+        });
+        
+        // Aumentar zoom
+        zoomInBtn.addEventListener('click', function() {
+            if (cropper) cropper.zoom(0.1);
+        });
+        
+        // Diminuir zoom
+        zoomOutBtn.addEventListener('click', function() {
+            if (cropper) cropper.zoom(-0.1);
+        });
+        
+        // Resetar
+        resetBtn.addEventListener('click', function() {
+            if (cropper) cropper.reset();
+        });
+        
+        // Recortar
+        cropBtn.addEventListener('click', function() {
+            if (!cropper) return;
+            
+            // Obter imagem recortada como uma URL de dados
+            const croppedCanvas = cropper.getCroppedCanvas({
+                width: 300, // Tamanho máximo da imagem final
+                height: 300,
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high'
+            });
+            
+            // Converter para URL de dados
+            const croppedImageUrl = croppedCanvas.toDataURL('image/jpeg', 0.9);
+            
+            // Exibir a imagem recortada
+            resultImage.src = croppedImageUrl;
+            editorContainer.style.display = 'none';
+            resultsContainer.style.display = 'block';
+        });
+        
+        // Voltar a editar
+        backBtn.addEventListener('click', function() {
+            resultsContainer.style.display = 'none';
+            editorContainer.style.display = 'block';
+        });
+        
+        // Confirmar imagem
+        confirmBtn.addEventListener('click', function() {
+            // Obter a imagem final
+            const finalImage = resultImage.src;
+            
+            // Enviar a imagem de volta para o Typebot via postMessage
+            // Isso permite que o Typebot receba a imagem quando estiver em um iframe
+            window.parent.postMessage({
+                type: 'typebotImageEditor',
+                data: {
+                    image: finalImage
+                }
+            }, '*');
+            
+            // Exibir mensagem de confirmação
+            alert('Imagem processada com sucesso e pronta para ser enviada ao Typebot!');
+        });
+    </script>
+</body>
+</html>
